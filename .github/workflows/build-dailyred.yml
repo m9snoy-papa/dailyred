@@ -1,0 +1,34 @@
+name: Build modified Daily Red
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        run: bash scripts/setup-macos.sh
+      - name: Fetch game sources
+        run: bash scripts/get-pokefirered.sh
+      - name: Apply six-variant modification
+        run: python3 apply.py .
+      - name: Download website dependencies
+        run: bash scripts/fetch-vendor.sh
+      - name: Compile GBA ROM
+        run: bash scripts/build-rom.sh
+      - name: Create portable website
+        run: |
+          test -s web/game/dailyred.gba.gz
+          test -s web/index.html
+          cp scripts/serve.mjs web/serve.mjs 2>/dev/null || true
+      - name: Upload modified game files
+        uses: actions/upload-artifact@v4
+        with:
+          name: dailyred-modified-web
+          path: web/
+          retention-days: 7
+          if-no-files-found: error
